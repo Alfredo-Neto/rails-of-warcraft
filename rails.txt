@@ -1,0 +1,145 @@
+rails new <project-name>
+
+bin/rails server
+
+
+Routes: (in config/routes.rb)
+
+model:
+verb "url", to: "controller#method"
+get "/articles", to: "articles#index"
+
+Then, to generate a matching controller with its action:
+bin/rails generate controller Articles index --skip-routes
+
+When an action does not explicitly render a view (or otherwise trigger an HTTP response), 
+Rails will automatically render a view that matches the name of the controller and action.
+So the index action will render app/views/articles/index.html.erb by default.
+
+To set a Home Page to the application, go to routes.rb, and use(for instance):
+	 root "articles#index"
+
+Models: A model is a Ruby class that is used to represent data
+
+To generate a Model:
+	ex:
+		bin/rails generate model Article title:string body:text
+
+The two files we'll focus on are the migration file
+(db/migrate/<timestamp>_create_articles.rb) 
+and the model file (app/models/article.rb).
+
+Database Migrations:
+	Migrations are used to alter the structure of an application's database. 
+	In Rails applications, migrations are written in Ruby so that they can 
+	be database-agnostic.
+
+To run the migration:
+	bin/rails db:migrate
+
+ Showing a List of all Articles:
+	in app/controllers/articles_controller.rb, do:
+
+		class ArticlesController < ApplicationController
+			def index
+				@articles = Article.all
+			end
+		end
+
+Controller instance variables can be accessed by the view
+That means we can reference @articles in app/views/articles/index.html.erb:
+	Example:
+		<h1>Articles</h1>
+
+		<ul>
+		<% @articles.each do |article| %>
+			<li>
+			<%= article.title %>
+			</li>
+		<% end %>
+		</ul>
+
+Wrapping everything i've seen so far:
+	1 - The browser makes a request: GET http://localhost:3000.
+	2 - Our Rails application receives this request.
+	3 - The Rails router maps the root route to the index action of ArticlesController.
+	4 - The index action uses the Article model to fetch all articles in the database.
+	5 - Rails automatically renders the app/views/articles/index.html.erb view.
+	6 - The ERB code in the view is evaluated to output HTML.
+	7 - The server sends a response containing the HTML back to the browser.
+
+CRUD:
+	Showing a Single Article:
+		in config/routes.rb, create another route:
+			get "/articles/:id", to: "articles#show"
+
+:id is called a route parameter, which is a segment of the request path.
+It's saved into the params Hash. To acccess this from the controller action,
+use params[:id].
+
+in app/controllers/articles_controller.rb, add a new action, called "show":
+	def show
+    	@article = Article.find(params[:id])
+  	end
+
+Create a corresponding view: show.html.erb to display the contents from @article
+	ex:
+		<h1><%= @article.title %></h1>
+
+		<p><%= @article.body %></p>
+
+Additionaly, an idea could be to add a link to each article in index.html.erb, like so:
+	h1>Articles</h1>
+
+	<ul>
+		<% @articles.each do |article| %>
+			<li>
+				<a href="/articles/<%= article.id %>">
+					<%= article.title %>
+				</a>
+			</li>
+		<% end %>
+	</ul>
+
+Resourceful Routing:
+	Everytime you execute CRUD operations using controllers, actions and views
+	for an entity, this entity can be called a resource. For instance, article is
+	a resource.
+
+Ruby has a routes method called "resources" that maps all routes that references that
+resource to a collection of resources, such as articles. So you can replace the two routes
+you created about articles to: 
+	resources: articles
+You can inspect what routes are mapped by running the bin/rails routes command:
+
+example output:
+	bin/rails routes
+      Prefix Verb   URI Pattern                  Controller#Action
+        root GET    /                            articles#index
+    articles GET    /articles(.:format)          articles#index
+ new_article GET    /articles/new(.:format)      articles#new
+     article GET    /articles/:id(.:format)      articles#show
+             POST   /articles(.:format)          articles#create
+edit_article GET    /articles/:id/edit(.:format) articles#edit
+             PATCH  /articles/:id(.:format)      articles#update
+             DELETE /articles/:id(.:format)      articles#destroy
+
+The resources method also has helpers to prevent your code to depend on a 
+specific route configuration. For example, if you get one item from the prefix
+column above and add a _path or _url to it, you will form your helper name.
+Eg. article_path(given an article) returns "articles/#{article.id}".
+	You can use it to shorten the link in index.html.erb:
+		
+		<a href="<%= article_path(article) %>">
+
+link_to helper:
+	To go even further, you can use the link_to method, which, if
+	you pass a model object to it, it will match to the right path helper
+	to convert the object to a path. It has two arguments. The usage is:
+		
+		link_to <link text>, <destination>
+
+	If you pass an article, link_to will call article_path, so 
+	app/views/articles/index.html.erb becomes:
+
+		 <%= link_to article.title, article %>
